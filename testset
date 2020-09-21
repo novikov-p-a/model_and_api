@@ -1,0 +1,63 @@
+"""
+Created on Fri Sep 11 17:28:50 2020
+
+@author: Pavel
+"""
+
+from flask import Flask, request
+import json
+import sys as ss
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.datasets import load_boston
+from sklearn.linear_model import LinearRegression
+
+app = Flask(__name__)
+
+@app.route('/')
+def just_title():
+    return 'BE'
+
+@app.route("/testsetp", methods=["GET"])
+def testsetp():
+    try:
+
+        if 'nrows' in request.args:
+            nrows = int(request.args['nrows'])
+        else:
+            nrows = 30
+
+        data = load_boston()
+        X, y = data.data, data.target
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
+        model = LinearRegression()
+        model.fit(X_train, y_train)
+
+        y_predict = model.predict(X_test)
+
+        y_test = np.reshape(y_test, (y_test.shape[0],1))
+        y_predict = np.reshape(y_predict, (y_predict.shape[0],1))
+
+        ids = [i for i in range(y_test.shape[0])]
+        ids = np.reshape(ids, (y_test.shape[0], 1))
+
+        formedtable = np.concatenate((X_test, y_test), axis=1)
+        formedtable = np.concatenate((formedtable, y_predict), axis=1)
+        formedtable = np.concatenate((ids, formedtable), axis=1)
+
+        columns = data.feature_names
+        columns = np.append(columns, ['Target', 'Predict'])
+        columns = np.append(['',], columns)
+
+        rows = [list(formedtable[i,:]) for i in range(nrows)]
+        datatable = {'cols': list(columns), 'rows': rows}
+        json_str = json.dumps(datatable)
+        response = json_str
+
+    except:
+
+        exception_message = ss.exc_info()[1]
+        response = exception_message
+
+    return response
